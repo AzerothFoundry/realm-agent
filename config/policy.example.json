@@ -1,0 +1,1 @@
+{"schema_version":1,"revision":1,"enabled":false,"scope":{"mode":"world_pvp","min_opponents":1,"max_opponents":8},"predicates":{},"phases":[{"id":"engage","min_hold_ms":0,"rules":[]}]}
