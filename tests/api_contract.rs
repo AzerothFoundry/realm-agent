@@ -3,7 +3,7 @@ use std::{sync::{Arc,Mutex,mpsc},path::PathBuf};
 use axum::{body::Body,http::{Request,StatusCode}};
 use tower::ServiceExt;
 use serde_json::json;
-fn path()->PathBuf{std::env::temp_dir().join(format!("realm-agent-events-{}-{}.jsonl",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()))}
+fn path()->PathBuf{use std::sync::atomic::{AtomicU64,Ordering};static N:AtomicU64=AtomicU64::new(0);std::env::temp_dir().join(format!("realm-agent-events-{}-{}.jsonl",std::process::id(),N.fetch_add(1,Ordering::Relaxed)))}
 fn setup()->(ApiState,mpsc::Receiver<Command>,PathBuf){let p=path();let(tx,rx)=mpsc::sync_channel(1);(ApiState{status:Arc::new(Mutex::new(Status::default())),commands:tx,events:Arc::new(EventHub::new(p.clone(),4).unwrap()),token:"test-local-token".into()},rx,p)}
 #[tokio::test]async fn authentication_and_queue_backpressure(){let(s,rx,p)=setup();let app=router(s);
  assert_eq!(app.clone().oneshot(Request::builder().uri("/status").body(Body::empty()).unwrap()).await.unwrap().status(),StatusCode::UNAUTHORIZED);
