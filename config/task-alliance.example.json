@@ -12,5 +12,5 @@
   "opponents": [2001, 2002],
   "duration_secs": 3600,
   "supply_count": 20,
-  "max_duels": 10
+  "max_duels": null
 }

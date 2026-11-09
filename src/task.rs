@@ -45,7 +45,17 @@ impl TaskEngine {
  fn navigate(&mut self,p:Position,e:&mut Effects){if !self.nav_pending{self.nav_pending=true;e.actions.push(Action::Navigate(p));}}
  pub fn tick(&mut self,w:&WorldView)->Effects{
  let mut e=Effects::default();let Some(spec)=self.spec.clone()else{return e};let Some(s)=self.status.clone()else{return e};if s.paused||matches!(s.phase.as_str(),"completed"|"cancelled"|"failed"){return e;}
- if w.now_ms>=s.deadline_ms||spec.max_duels.is_some_and(|n|s.duels>=n){self.cleanup(&mut e);self.phase("completed","limit_reached",w,&mut e);e.events.push(("task.completed".into(),json!({"duels":s.duels})));return e;}
+ if w.now_ms>=s.deadline_ms||spec.max_duels.is_some_and(|n|s.duels>=n){
+  self.cleanup(&mut e);
+  e.events.push(("task.completed".into(),json!({"duels":s.duels,"reason":"duration_or_duel_limit"})));
+  // The activity selector currently has one candidate: city_duel. Keep the same
+  // specification but start a fresh task generation after the one-hour window.
+  self.next_id+=1;
+  self.status=Some(TaskStatus{id:self.next_id,kind:spec.kind.clone(),phase:"checking_supplies".into(),reason:"next_task_selected".into(),started_ms:w.now_ms,deadline_ms:w.now_ms.saturating_add(spec.duration_secs*1000),..Default::default()});
+  self.phase_at=w.now_ms;self.next_action=w.now_ms;self.nav_pending=false;self.countdown_until=0;self.combat_seen=false;self.passive=false;self.arbiter=0;self.buff_tried.clear();
+  e.events.push(("task.selected".into(),json!({"id":self.next_id,"kind":spec.kind,"reason":"only_configured_candidate"})));
+  return e;
+ }
  let Some(me)=w.me()else{return e};if !me.alive(){self.phase("blocked","dead_or_unknown_health",w,&mut e);return e;}
  if me.in_combat()&&self.arbiter==0{if !self.combat_seen{self.combat_seen=true;self.passive=true;e.events.push(("combat.started".into(),json!({"mode":"passive"})));}if let Some(target)=me.target.filter(|id|spec.opponents.contains(id)){if let Some(a)=crate::strategy::choose(w,target){e.actions.push(a);}}return e;}
  if self.passive&&self.combat_seen&&!me.in_combat(){self.combat_seen=false;self.passive=false;e.events.push(("combat.ended".into(),json!({"mode":"passive"})));self.phase("recovering","combat_ended",w,&mut e);}
