@@ -37,6 +37,7 @@ impl TaskEngine {
  GameEvent::DuelCountdown{seconds}=>{if self.arbiter!=0{self.countdown_until=w.now_ms+u64::from(seconds)*1000;self.phase("countdown","server_countdown",w,&mut e);}},
  GameEvent::DuelComplete{started}=>{self.arbiter=0;e.actions.extend([Action::StopAttack,Action::StopMoving]);if started{if let Some(st)=&mut self.status{st.duels+=1;}}self.combat_seen=false;self.buff_tried.clear();self.phase("recovering","duel_finished",w,&mut e);e.events.push(("combat.ended".into(),json!({"duel":true,"started":started})));},
  GameEvent::DuelWinner{winner,loser}=>{if let Some(st)=&mut self.status{if winner==w.character{st.wins+=1;}if loser==w.character{st.losses+=1;}}},
+ GameEvent::GroupInvite{inviter}=>{e.actions.push(Action::AcceptGroup);e.events.push(("group.invite_accepted".into(),json!({"inviter":inviter,"mode":"continue_current_task"})));},
  GameEvent::Attacked{attacker}=>{e.events.push(("enemy.encountered".into(),json!({"guid":attacker,"source":"attack"})));if !self.combat_seen{self.passive=self.arbiter==0;self.combat_seen=true;e.events.push(("combat.started".into(),json!({"mode":if self.passive{"passive"}else{"duel"},"attacker":attacker})));}},
  GameEvent::CastFailed{spell,reason}=>{self.next_action=w.now_ms+1500;e.events.push(("action.rejected".into(),json!({"spell":spell,"reason":reason})));},
  GameEvent::Disconnected{reason}=>{self.cleanup(&mut e);self.phase("failed","disconnected",w,&mut e);e.events.push(("task.failed".into(),json!({"reason":reason})));}
