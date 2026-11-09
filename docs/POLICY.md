@@ -4,4 +4,6 @@
 
 `Store::stage` parses a candidate without changing the active snapshot; `publish` changes it at an explicit boundary and increments the generation. A combat adapter should pin the active `Arc<Policy>` until the encounter ends. Invalid JSON keeps the last good policy.
 
+`Store::reload_file(path)` is the file based hot-reload entry point: it reads and parses the complete file, then publishes only after validation. Call it from one owner at a bounded interval (for example once per second), and keep the returned `Arc<Policy>` pinned for an active encounter. Atomic file replacement is recommended so a reader never sees an editor's partial write.
+
 The current engine is an offline foundation. It is not yet connected to the live protocol loop and does not claim complete PVP/PVE rotations.
