@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "city_duel",
+  "site": {
+    "inn": {"map": 0, "x": -8866.0, "y": 674.0, "z": 97.9864},
+    "arena": {"map": 0, "x": -9170.0, "y": 390.0, "z": 90.0},
+    "radius": 40.0,
+    "vendor_entry": 6740,
+    "food_entry": 8950,
+    "teleport_spell": 3561
+  },
+  "opponents": [2001, 2002],
+  "duration_secs": 3600,
+  "supply_count": 20,
+  "max_duels": 10
+}

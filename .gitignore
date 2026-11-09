@@ -1,0 +1,9 @@
+/target/
+/.cargo/
+/.env*
+!/config/*.example.json
+/run/
+/data/
+*.log
+*.jsonl
+.DS_Store
