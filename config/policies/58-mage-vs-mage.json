@@ -258,7 +258,7 @@
                       {
                         "field": "target.aura",
                         "op": "contains",
-                        "value": 45438
+                        "value": 11958
                       }
                     ]
                   }
