@@ -28,6 +28,7 @@ impl ConnectedClient {
             Action::CancelDuel(arbiter) => self.writer.duel_cancelled(arbiter)?,
             Action::Stand(state) => self.writer.stand_state_change(state)?,
             Action::UseItem { bag, slot } => self.writer.use_item(bag, slot, 0, messages::UseItemTarget::SelfImplicit)?,
+            Action::VendorList(vendor) => self.writer.list_inventory(vendor)?,
             Action::Buy { vendor, item, count, .. } => self.writer.buy_item(vendor, item, count)?,
             Action::StopAttack => self.writer.attack_stop()?,
             Action::Navigate(_) | Action::StopMoving => bail!("movement executor not connected yet"),
