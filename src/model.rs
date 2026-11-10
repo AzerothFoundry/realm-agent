@@ -35,6 +35,7 @@ pub struct Entity {
     #[serde(default)] pub rage: Option<u32>,
     pub level: Option<u8>,
     pub class: Option<u8>,
+    #[serde(default)] pub form:Option<u8>,
     pub flags: u32,
     #[serde(default)] pub duel_arbiter:u64,
     pub auras: BTreeSet<u32>,
@@ -61,6 +62,7 @@ pub struct WorldView {
     pub money: Option<u32>, pub vendor: Option<VendorView>,
     pub duel: Option<DuelView>, pub run_speed: f32,
     pub casts: BTreeMap<u64, CastView>,
+    pub observed_spells:BTreeMap<u64,BTreeMap<u32,u64>>,
     pub rooted: bool,
     pub control_lost: bool,
     pub position_revision:u64,
@@ -119,7 +121,7 @@ pub enum Action {
     Select(u64), Cast{spell:u32,target:Option<u64>}, AcceptDuel(u64), CancelDuel(u64),
     Navigate(Position), StopMoving, Stand(u32), UseItem{bag:u8,slot:u8},
     VendorList(u64), Buy{vendor:u64,item:u32,slot:u8,count:u8}, StopAttack,
-    Attack(u64), AcceptGroup,
+    Attack(u64), AcceptGroup, CancelCast(u32),
 }
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct TaskStatus {

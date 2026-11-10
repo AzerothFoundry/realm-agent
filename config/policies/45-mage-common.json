@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "enabled": true,
+  "scope": {
+    "mode": "world_pvp",
+    "min_opponents": 1,
+    "max_opponents": 8
+  },
+  "predicates": {
+    "mage": {
+      "field": "self.class",
+      "op": "eq",
+      "value": 8
+    },
+    "melee": {
+      "any": [
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 4
+        }
+      ]
+    },
+    "caster": {
+      "any": [
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 5
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 7
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 8
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 9
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 11
+        }
+      ]
+    },
+    "hunter": {
+      "any": [
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 3
+        }
+      ]
+    },
+    "healer": {
+      "any": [
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 2
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 5
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 7
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 11
+        }
+      ]
+    },
+    "known_opponent": {
+      "any": [
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 1
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 2
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 3
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 4
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 5
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 7
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 8
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 9
+        },
+        {
+          "field": "target.class",
+          "op": "eq",
+          "value": 11
+        }
+      ]
+    },
+    "rooted": {
+      "any": [
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 122
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 865
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 6131
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 10230
+        }
+      ]
+    },
+    "near": {
+      "field": "target.distance",
+      "op": "lte",
+      "value": 8
+    }
+  },
+  "phases": [
+    {
+      "id": "engage",
+      "min_hold_ms": 0,
+      "rules": [
+        {
+          "id": "mage-common-hold-own-iceblock",
+          "owner": "mage.matchup",
+          "priority": 1600,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "any": [
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 11958
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 45438
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "wait",
+            "ability": "decision.wait",
+            "target": "none"
+          }
+        },
+        {
+          "id": "mage-ice-block-emergency",
+          "owner": "mage.matchup",
+          "priority": 1400,
+          "when": {
+            "all": [
+              {
+                "ref": "mage"
+              },
+              {
+                "field": "self.health_pct",
+                "op": "lt",
+                "value": 25
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 11958
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 11958
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.ice_block",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-ice-barrier",
+          "owner": "mage.matchup",
+          "priority": 1200,
+          "when": {
+            "all": [
+              {
+                "ref": "mage"
+              },
+              {
+                "ref": "known_opponent"
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 11426
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 11426
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13031
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13032
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13033
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.ice_barrier",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-nova-multiple-engaged",
+          "owner": "mage.matchup",
+          "priority": 1150,
+          "when": {
+            "all": [
+              {
+                "ref": "mage"
+              },
+              {
+                "ref": "known_opponent"
+              },
+              {
+                "field": "nearby.enemy_count",
+                "op": "gte",
+                "value": 2
+              },
+              {
+                "ref": "near"
+              },
+              {
+                "not": {
+                  "ref": "rooted"
+                }
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 122
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frost_nova",
+            "target": "self"
+          }
+        }
+      ]
+    }
+  ]
+}

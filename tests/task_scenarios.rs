@@ -2,7 +2,7 @@ use realm_agent::{model::*,task::TaskEngine};
 use std::collections::BTreeSet;
 fn world(class:u8)->WorldView{
  let p=Position{map:1,x:1232.41,y:-4411.27,z:22.9853,orientation:0.};
- let me=Entity{guid:10,kind:Kind::Player,entry:0,name:Some("Fixture".into()),position:Some(p),health:Some(100),max_health:Some(100),mana:Some(100),max_mana:Some(100),level:Some(60),class:Some(class),rage:None,flags:0,duel_arbiter:0,auras:BTreeSet::new(),target:None,updated_ms:0};
+ let me=Entity{guid:10,kind:Kind::Player,entry:0,name:Some("Fixture".into()),position:Some(p),health:Some(100),max_health:Some(100),mana:Some(100),max_mana:Some(100),level:Some(60),class:Some(class),form:Some(0),rage:None,flags:0,duel_arbiter:0,auras:BTreeSet::new(),target:None,updated_ms:0};
  let mut w=WorldView{connected:true,class,self_guid:10,character:"Fixture".into(),position:Some(p),..Default::default()};w.objects.insert(10,me);w
 }
 fn spec()->TaskSpec{serde_json::from_str(include_str!("../config/task-horde.example.json")).unwrap()}

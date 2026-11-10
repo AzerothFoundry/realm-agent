@@ -131,11 +131,11 @@ fn field_type(s: &str) -> Option<&'static str> {
     match s {
         "self.class" | "self.level" | "self.health_pct" | "self.mana_pct" | "self.power"
         | "target.class" | "target.level" | "target.health_pct" | "target.distance"
-        | "nearby.enemy_count" => Some("number"),
+        | "nearby.enemy_count" | "target.form" | "target.cast_spell" => Some("number"),
         "self.combat" | "self.casting" | "self.controlled" | "target.casting" | "target.alive" => {
             Some("flag")
         }
-        "self.ready_spells" | "self.knows" | "self.aura" | "target.aura" => Some("set"),
+        "self.ready_spells" | "self.knows" | "self.aura" | "target.aura" | "target.observed_spells" | "target.recent_spells" => Some("set"),
         "scene.kind" => Some("text"),
         _ => None,
     }
@@ -145,12 +145,12 @@ fn capability(a: &ActionSpec) -> bool {
         "mage.frostbolt"
         | "mage.fireball"
         | "mage.fire_blast"
-        | "mage.counterspell"
+        | "mage.counterspell" | "mage.polymorph"
         
         | "warrior.hamstring"
         | "warrior.charge"
         | "warrior.heroic_strike" => a.kind == ActionKind::Cast && a.target == "primary_enemy",
-        "mage.cone_of_cold" | "mage.frost_nova" | "mage.ice_barrier" | "mage.ice_block" => a.kind == ActionKind::Cast && a.target == "self",
+        "mage.remove_curse" | "mage.cone_of_cold" | "mage.frost_nova" | "mage.ice_barrier" | "mage.ice_block" => a.kind == ActionKind::Cast && a.target == "self",
         "combat.attack" => a.kind == ActionKind::Attack && a.target == "primary_enemy",
         "combat.approach" => a.kind == ActionKind::Move && a.target == "primary_enemy",
         "travel.stop" => a.kind == ActionKind::Stop && a.target == "none",

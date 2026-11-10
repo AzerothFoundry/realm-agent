@@ -42,6 +42,7 @@ impl ConnectedClient {
             Action::VendorList(vendor) => self.writer.list_inventory(vendor)?,
             Action::Buy { vendor, item, count, .. } => self.writer.buy_item(vendor, item, count)?,
             Action::StopAttack => self.writer.attack_stop()?,
+            Action::CancelCast(spell)=>{self.writer.cancel_cast(spell)?;settle_cast(&mut self.view,self.character_guid,spell);},
             Action::Navigate(_) | Action::StopMoving => bail!("movement executor not connected yet"),
         }
         Ok(())
@@ -82,7 +83,7 @@ impl ConnectedClient {
                 match decoded_event {
                     SessionEvent::Worldport { map_id, position, orientation, needs_ack } => {
                         self.view.position_revision=self.view.position_revision.wrapping_add(1);
-                        if needs_ack {self.writer.worldport_ack()?;self.fields.clear();self.view.objects.clear();self.remote_splines.clear();self.staged.clear();}
+                        if needs_ack {self.writer.worldport_ack()?;self.fields.clear();self.view.objects.clear();self.remote_splines.clear();self.staged.clear();self.view.observed_spells.clear();}
                         self.view.position=Some(Position{map:map_id,x:position[0],y:position[1],z:position[2],orientation});
                     }
                     SessionEvent::Teleport{guid,counter,position,orientation}=>{self.writer.teleport_ack(guid,counter)?;if guid==self.character_guid{self.view.position_revision=self.view.position_revision.wrapping_add(1);let map=self.view.position.map_or(0,|p|p.map);self.view.position=Some(Position{map,x:position[0],y:position[1],z:position[2],orientation});}}
@@ -97,7 +98,7 @@ impl ConnectedClient {
                     }
                     SessionEvent::ItemCreate { guid, container, fields } => {
                         self.fields.insert(guid, fields);
-                        self.view.objects.insert(guid, Entity { guid, kind: if container { Kind::Container } else { Kind::Item }, entry: 0, name: None, position: None, health: None, max_health: None, mana: None, max_mana: None, rage: None, level: None, class: None, flags: 0,duel_arbiter:0, auras: Default::default(), target: None, updated_ms: self.view.now_ms });
+                        self.view.objects.insert(guid, Entity { guid, kind: if container { Kind::Container } else { Kind::Item }, entry: 0, name: None, position: None, health: None, max_health: None, mana: None, max_mana: None, rage: None, level: None, class: None,form:None, flags: 0,duel_arbiter:0, auras: Default::default(), target: None, updated_ms: self.view.now_ms });
                     }
                     SessionEvent::ObjectValues { guid, fields } => {
                         let cache = self.fields.entry(guid).or_default(); cache.merge(fields);
@@ -111,7 +112,7 @@ impl ConnectedClient {
                     }
                     SessionEvent::ObjectsRemoved(ids) => { for id in ids {self.remote_splines.remove(&id);if let Some(e)=self.view.objects.remove(&id){self.staged.insert(id,e);}}while self.staged.len()>4096{if let Some(id)=self.staged.keys().next().copied(){self.staged.remove(&id);self.fields.remove(&id);}} }
                     SessionEvent::ObjectsNear(ids) => {for id in ids{if let Some(e)=self.staged.remove(&id){self.view.objects.insert(id,e);}}}
-                    SessionEvent::ObjectDestroyed(guid) => {self.remote_splines.remove(&guid); self.fields.remove(&guid); self.view.objects.remove(&guid); }
+                    SessionEvent::ObjectDestroyed(guid) => {self.remote_splines.remove(&guid); self.fields.remove(&guid); self.view.objects.remove(&guid);self.view.observed_spells.remove(&guid); }
                     SessionEvent::ClientControl{mover,allow_move}=>{if mover==self.character_guid{self.view.control_lost=!allow_move;}}
                     SessionEvent::MonsterMove{guid,transport,start,path,spline_id,facing,stop,duration_ms,..}=>{
                         self.remote_splines.remove(&guid);
@@ -119,7 +120,7 @@ impl ConnectedClient {
                     }
                     SessionEvent::VendorInventory{vendor,items}=>{self.view.vendor=Some(crate::model::VendorView{guid:vendor,items:items.into_iter().filter_map(|i|u8::try_from(i.slot).ok().map(|slot|crate::model::VendorItem{slot,entry:i.entry,price:i.price,buy_count:i.buy_count})).collect()});}
                     SessionEvent::SpellStart{caster,spell_id,cast_time_ms,..}=>{let ends=self.view.now_ms+u64::from(cast_time_ms);self.view.casts.insert(caster,crate::model::CastView{spell:spell_id,ends_ms:ends});if caster==self.character_guid{events.push(GameEvent::SpellStarted{spell:spell_id,cast_ms:cast_time_ms});self.view.casting_until=ends;self.view.gcd_until=self.view.now_ms+crate::strategy::spell_timing(spell_id).2;}}
-                    SessionEvent::SpellGo{caster,spell_id,hits,..}=>{if caster==self.character_guid{events.push(GameEvent::SpellLaunched{spell:spell_id,hits:hits.len()});}let requested=settle_cast(&mut self.view,caster,spell_id);if caster==self.character_guid&&requested{let(_,cd,gcd)=crate::strategy::spell_timing(spell_id);self.view.cooldowns.insert(spell_id,self.view.now_ms+cd);if crate::strategy::spell_timing(spell_id).0==0{self.view.gcd_until=self.view.gcd_until.max(self.view.now_ms+gcd);}}}
+                    SessionEvent::SpellGo{caster,spell_id,hits,..}=>{if self.view.objects.contains_key(&caster){if self.view.observed_spells.len()<512||self.view.observed_spells.contains_key(&caster){let history=self.view.observed_spells.entry(caster).or_default();history.retain(|_,at|self.view.now_ms.saturating_sub(*at)<=120000);if history.len()<128||history.contains_key(&spell_id){history.insert(spell_id,self.view.now_ms);}}}if caster==self.character_guid{events.push(GameEvent::SpellLaunched{spell:spell_id,hits:hits.len()});}let requested=settle_cast(&mut self.view,caster,spell_id);if caster==self.character_guid&&requested{let(_,cd,gcd)=crate::strategy::spell_timing(spell_id);self.view.cooldowns.insert(spell_id,self.view.now_ms+cd);if crate::strategy::spell_timing(spell_id).0==0{self.view.gcd_until=self.view.gcd_until.max(self.view.now_ms+gcd);}}}
                     SessionEvent::SpellFailedOther{caster,spell_id}=>{settle_cast(&mut self.view,caster,spell_id);}
                     SessionEvent::SpellDelayed{caster,delay_ms}=>{if let Some(c)=self.view.casts.get_mut(&caster){c.ends_ms+=u64::from(delay_ms);}if caster==self.character_guid{self.view.casting_until+=u64::from(delay_ms);}}
                     SessionEvent::ChannelStart{duration_ms,..}=>{self.view.casting_until=self.view.now_ms+u64::from(duration_ms);}
@@ -177,9 +178,9 @@ impl ConnectedClient {
     }
     fn entity_from_fields(&self,guid:u64,kind:EntityKind,pos:[f32;3],orientation:f32,fields:&messages::ObjectFields)->Entity{
         let kind=match kind{EntityKind::Player=>Kind::Player,EntityKind::Unit=>Kind::Creature,EntityKind::GameObject=>Kind::GameObject,EntityKind::Corpse|EntityKind::DynamicObject|EntityKind::Other=>Kind::Other};
-        let mut e=Entity{guid,kind,entry:0,name:None,position:Some(Position{map:self.view.position.map_or(0,|p|p.map),x:pos[0],y:pos[1],z:pos[2],orientation}),health:None,max_health:None,mana:None,max_mana:None,rage:None,level:None,class:None,flags:0,duel_arbiter:0,auras:Default::default(),target:None,updated_ms:self.view.now_ms}; Self::update_entity(&mut e,fields,self.view.now_ms); e
+        let mut e=Entity{guid,kind,entry:0,name:None,position:Some(Position{map:self.view.position.map_or(0,|p|p.map),x:pos[0],y:pos[1],z:pos[2],orientation}),health:None,max_health:None,mana:None,max_mana:None,rage:None,level:None,class:None,form:None,flags:0,duel_arbiter:0,auras:Default::default(),target:None,updated_ms:self.view.now_ms}; Self::update_entity(&mut e,fields,self.view.now_ms); e
     }
-    fn update_entity(e:&mut Entity,f:&messages::ObjectFields,now:u64){e.entry=f.object_entry().unwrap_or(e.entry);e.health=f.unit_health();e.max_health=f.unit_max_health();e.mana=f.unit_power(0);e.max_mana=f.unit_max_power(0);e.rage=f.unit_shown_power(1);e.auras=f.unit_aura_ids().filter(|x|*x!=0).collect();e.level=f.unit_level().and_then(|x|u8::try_from(x).ok());e.flags= f.unit_flags();e.class=f.unit_class();e.duel_arbiter=if e.kind==Kind::Player{f.player_duel_arbiter()}else{0};e.target=f.unit_target();e.updated_ms=now;}
+    fn update_entity(e:&mut Entity,f:&messages::ObjectFields,now:u64){e.entry=f.object_entry().unwrap_or(e.entry);e.health=f.unit_health();e.max_health=f.unit_max_health();e.mana=f.unit_power(0);e.max_mana=f.unit_max_power(0);e.rage=f.unit_shown_power(1);e.auras=f.unit_aura_ids().filter(|x|*x!=0).collect();e.level=f.unit_level().and_then(|x|u8::try_from(x).ok());e.flags= f.unit_flags();e.class=f.unit_class();e.form=Some(f.unit_shapeshift_form());e.duel_arbiter=if e.kind==Kind::Player{f.player_duel_arbiter()}else{0};e.target=f.unit_target();e.updated_ms=now;}
 }
 
 // Triggered effects (e.g. Frost Armor chill) launch while a real cast is still preparing.

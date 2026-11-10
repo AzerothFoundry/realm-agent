@@ -8,12 +8,23 @@ pub const FROST_NOVA: &[u32] = &[122,865,6131,10230];
 pub const COUNTERSPELL: &[u32] = &[2139];
 pub const CONE_OF_COLD: &[u32] = &[120,8492,10159,10160,10161];
 pub const ICE_BARRIER: &[u32] = &[11426,13031,13032,13033];
+pub const POLYMORPH:&[u32]=&[118,12824,12825,12826];
+pub const REMOVE_CURSE:&[u32]=&[475];
 pub const ICE_BLOCK: &[u32] = &[11958];
 pub const HAMSTRING: &[u32] = &[1715,7372,7373];
 pub const HEROIC_STRIKE: &[u32] = &[78,284,285,1608,11564,11565,11566,11567,25286];
 pub const CHARGE: &[u32] = &[100,6178,11578];
 pub const INTERCEPT: &[u32] = &[20252,20616,20617];
 pub fn highest_known(view:&WorldView,chain:&[u32])->Option<u32>{chain.iter().rev().find(|s|view.spells.contains(s)).copied()}
+/// Match the existing client cancellation flow for urgent counters: only our own
+/// offensive cast may be interrupted, and known cooldown/GCD facts remain authoritative.
+pub fn policy_ready(view:&WorldView,spell:u32)->bool{
+ if view.ready(spell){return true;}
+ let can_cancel=view.pending_spell.is_some_and(|p|FROSTBOLT.contains(&p)||FIREBALL.contains(&p)||POLYMORPH.contains(&p));
+ can_cancel&&(COUNTERSPELL.contains(&spell)||ICE_BLOCK.contains(&spell))&&view.spells.contains(&spell)
+ &&view.now_ms>=view.cooldowns.get(&spell).copied().unwrap_or(0)
+ &&(COUNTERSPELL.contains(&spell)||view.now_ms>=view.gcd_until)
+}
 fn ready_rank(view:&WorldView,chain:&[u32])->Option<u32>{highest_known(view,chain).filter(|s|view.ready(*s))}
 fn cast(spell:u32,target:Option<u64>)->Action{Action::Cast{spell,target}}
 pub fn choose(view:&WorldView,target:u64)->Option<Action>{choose_actions(view,target).into_iter().next()}
@@ -59,6 +70,8 @@ pub fn choose_actions(view:&WorldView,target:u64)->Vec<Action>{
 /// (cast time, cooldown, GCD) in milliseconds. Conservative hints, not DBC validation.
 /// Unknown spells get the ordinary GCD and no invented long cooldown.
 pub fn spell_timing(spell:u32)->(u64,u64,u64){
+ if POLYMORPH.contains(&spell){return(1500,0,1500)}
+ if REMOVE_CURSE.contains(&spell){return(0,0,1500)}
  if COUNTERSPELL.contains(&spell){return(0,30000,0)}
  if CONE_OF_COLD.contains(&spell){return(0,10000,1500)}
  if ICE_BARRIER.contains(&spell){return(0,30000,1500)}
