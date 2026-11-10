@@ -5,7 +5,7 @@
 //! the HTTP API. More object-field mappings will be added incrementally.
 use anyhow::{bail, Context, Result};
 use benilla_protocol::{messages, events::{EntityKind, SessionEvent}, Poll, WorldReader, WorldSession, WorldWriter};
-use crate::model::{Entity,GameEvent,Kind,Position,WorldView};
+use crate::model::{Action,Entity,GameEvent,Kind,Position,WorldView};
 use std::collections::BTreeMap;
 
 pub struct ConnectedClient {
@@ -18,6 +18,22 @@ pub struct ConnectedClient {
 }
 
 impl ConnectedClient {
+    pub fn execute(&mut self, action: Action) -> Result<()> {
+        match action {
+            Action::Select(guid) => self.writer.set_selection(guid)?,
+            Action::Cast { spell, target } => self.writer.cast_spell(spell, target)?,
+            Action::Attack(guid) => self.writer.attack_swing(guid)?,
+            Action::AcceptGroup => self.writer.group_accept()?,
+            Action::AcceptDuel(arbiter) => self.writer.duel_accepted(arbiter)?,
+            Action::CancelDuel(arbiter) => self.writer.duel_cancelled(arbiter)?,
+            Action::Stand(state) => self.writer.stand_state_change(state)?,
+            Action::UseItem { bag, slot } => self.writer.use_item(bag, slot, 0, messages::UseItemTarget::SelfImplicit)?,
+            Action::Buy { vendor, item, count, .. } => self.writer.buy_item(vendor, item, count)?,
+            Action::StopAttack => self.writer.attack_stop()?,
+            Action::Navigate(_) | Action::StopMoving => bail!("movement executor not connected yet"),
+        }
+        Ok(())
+    }
     pub fn login(address: &str, username: &str, password: &str, character: &str) -> Result<Self> {
         let logon = benilla_protocol::logon(address, username, password, u32::from_be_bytes(*b"zhCN"))
             .context("logon failed")?;
@@ -114,6 +130,25 @@ impl ConnectedClient {
             Poll::Skipped { reason, .. } => events.push(GameEvent::Disconnected { reason }),
         }
         Ok(events)
+    }
+
+    pub fn apply_action(&mut self, action: crate::model::Action) -> Result<()> {
+        use crate::model::Action;
+        match action {
+            Action::Select(guid) => self.writer.set_selection(guid),
+            Action::Cast { spell, target } => self.writer.cast_spell(spell, target),
+            Action::Attack(guid) => self.writer.attack_swing(guid),
+            Action::AcceptDuel(arbiter) => self.writer.duel_accepted(arbiter),
+            Action::CancelDuel(arbiter) => self.writer.duel_cancelled(arbiter),
+            Action::AcceptGroup => self.writer.group_accept(),
+            Action::Stand(state) => self.writer.stand_state_change(state),
+            Action::UseItem { bag, slot } => self.writer.use_item(bag, slot, 0, messages::UseItemTarget::SelfImplicit),
+            Action::Buy { vendor, item, count, .. } => self.writer.buy_item(vendor, item, count),
+            Action::StopAttack => self.writer.attack_stop(),
+            Action::Navigate(_) => bail!("navigation action must be handled by the local follower"),
+            Action::StopMoving => Ok(()),
+            Action::VendorList(_) => bail!("vendor list action is not yet exposed by WorldWriter"),
+        }
     }
 
     fn entity_from_fields(&self,guid:u64,kind:EntityKind,pos:[f32;3],orientation:f32,fields:&messages::ObjectFields)->Entity{
