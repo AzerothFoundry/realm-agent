@@ -1,0 +1,11 @@
+{
+  "instance_id": "mage-example",
+  "server": {"host": "127.0.0.1:3724"},
+  "account": {"username": "TESTACCOUNT", "character": "ExampleMage", "password_env": "REALM_AGENT_PASSWORD"},
+  "api": {"bind": "127.0.0.1:18112", "token_env": "REALM_AGENT_API_TOKEN"},
+  "mmaps": "../data/mmaps",
+  "log_dir": "../run",
+  "task_file": "task-horde.example.json",
+  "policy_file": "policies",
+  "auto_accept_group": true
+}

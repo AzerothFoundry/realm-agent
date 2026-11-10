@@ -19,3 +19,24 @@ fn setup()->(ApiState,mpsc::Receiver<Command>,PathBuf){let p=path();let(tx,rx)=m
  #[cfg(unix)]{use std::os::unix::fs::PermissionsExt;assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode()&0o777,0o600);}
  drop(hub);let text=std::fs::read_to_string(&p).unwrap();assert!(text.contains("task_started"));assert!(!text.contains("never-log"));std::fs::remove_file(p).unwrap();}
 #[test]fn bounded_rotation(){let p=path();let hub=EventHub::new(p.clone(),4).unwrap();let detail=json!({"payload":"x".repeat(60000)});for _ in 0..100{hub.emit(None,"sample",detail.clone()).unwrap();}assert!(p.with_extension("jsonl.1").exists());assert!(std::fs::metadata(&p).unwrap().len()<=5*1024*1024);drop(hub);std::fs::remove_file(&p).unwrap();for i in 1..=5{let _=std::fs::remove_file(p.with_extension(format!("jsonl.{i}")));}}
+
+#[tokio::test]async fn websocket_real_tcp_snapshot_replay_and_live(){
+ use futures_util::{StreamExt as _,SinkExt as _};use tokio_tungstenite::tungstenite::{client::IntoClientRequest,Message};
+ let(s,_rx,p)=setup();s.events.emit(None,"before",json!({})).unwrap();let hub=s.events.clone();
+ let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let address=listener.local_addr().unwrap();let server=tokio::spawn(realm_agent::api::serve(listener,s));
+ assert!(tokio_tungstenite::connect_async(format!("ws://{address}/ws")).await.is_err());
+ let mut request=format!("ws://{address}/ws?after=0").into_client_request().unwrap();request.headers_mut().insert("authorization","Bearer test-local-token".parse().unwrap());
+ let(mut socket,response)=tokio_tungstenite::connect_async(request).await.unwrap();assert_eq!(response.status(),101);
+ let read=|m:Message|serde_json::from_str::<serde_json::Value>(m.to_text().unwrap()).unwrap();
+ assert_eq!(read(socket.next().await.unwrap().unwrap())["kind"],"state.snapshot");
+ assert_eq!(read(socket.next().await.unwrap().unwrap())["event"]["kind"],"before");
+ hub.emit(None,"after",json!({})).unwrap();assert_eq!(read(socket.next().await.unwrap().unwrap())["event"]["kind"],"after");
+ socket.send(Message::Text("raw_cast".into())).await.unwrap();assert_eq!(read(socket.next().await.unwrap().unwrap())["kind"],"error");socket.close(None).await.unwrap();server.abort();std::fs::remove_file(p).unwrap();
+}
+#[tokio::test]async fn world_objects_pagination_is_authenticated_and_bounded(){
+ let(s,_rx,p)=setup();s.status.lock().unwrap().visible_objects=600;
+ let app=router(s);let request=|uri:&str|Request::builder().uri(uri).header("authorization","Bearer test-local-token").body(Body::empty()).unwrap();
+ assert_eq!(app.clone().oneshot(request("/world/objects?limit=201")).await.unwrap().status(),StatusCode::BAD_REQUEST);
+ let response=app.oneshot(request("/world/objects?offset=0&limit=100")).await.unwrap();assert_eq!(response.status(),StatusCode::OK);
+ use http_body_util::BodyExt;let bytes=response.into_body().collect().await.unwrap().to_bytes();let result:serde_json::Value=serde_json::from_slice(&bytes).unwrap();assert_eq!(result["count"],600);assert_eq!(result["partial"],true);std::fs::remove_file(p).unwrap();
+}

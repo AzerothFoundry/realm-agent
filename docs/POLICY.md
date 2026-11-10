@@ -6,4 +6,12 @@
 
 `Store::reload_file(path)` is the file based hot-reload entry point: it reads and parses the complete file, then publishes only after validation. Call it from one owner at a bounded interval (for example once per second), and keep the returned `Arc<Policy>` pinned for an active encounter. Atomic file replacement is recommended so a reader never sees an editor's partial write.
 
-The current engine is an offline foundation. It is not yet connected to the live protocol loop and does not claim complete PVP/PVE rotations.
+The engine is wired into the live task loop through PolicyRuntime. The small example rotations do not claim complete PVP/PVE behavior for every class or encounter.
+
+## Online task adapter
+
+`PolicyRuntime` now loads one file or a directory of JSON files (lexicographic filename order), at most once per second when combat decisions are evaluated. It publishes a complete valid bundle atomically, keeps the last good version on error, pins the old bundle during a fight and releases it on duel completion. An invalid first configuration fails initialization. It maps named supported abilities to the highest learned rank and then to normal internal `Action` values; no raw protocol endpoint is exposed.
+
+The task currently calls only the `engage` phase. Other phase names and `min_hold_ms` are representable but do not form an automatic phase-transition graph yet. Directory order selects policy order; automatic named policy transitions and per-file fault isolation are not complete. The included PVE/PVP files are deliberately small example rotations, not competitive strategies for every opponent.
+
+`None` from the adapter means legacy fallback, including no applicable JSON rule; explicit `decision.wait` yields an intentional empty action list. State reports the selected rule and current generation/error. Enemy cooldowns remain unknown unless observed, never fetched from a server database.
