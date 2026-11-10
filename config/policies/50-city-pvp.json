@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "enabled": true,
+  "scope": {
+    "mode": "world_pvp",
+    "min_opponents": 1,
+    "max_opponents": 8
+  },
+  "predicates": {},
+  "phases": [
+    {
+      "id": "engage",
+      "min_hold_ms": 0,
+      "rules": [
+        {
+          "id": "mage-approach",
+          "owner": "combat",
+          "priority": 600,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.distance",
+                "op": "gt",
+                "value": 30
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-frostbolt",
+          "owner": "combat",
+          "priority": 100,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 116
+              },
+              {
+                "field": "target.distance",
+                "op": "lte",
+                "value": 30
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frostbolt",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "warrior-approach",
+          "owner": "combat",
+          "priority": 600,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 1
+              },
+              {
+                "field": "target.distance",
+                "op": "gt",
+                "value": 3
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "warrior-hamstring",
+          "owner": "combat",
+          "priority": 200,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 1
+              },
+              {
+                "field": "self.power",
+                "op": "gte",
+                "value": 10
+              },
+              {
+                "field": "target.distance",
+                "op": "lte",
+                "value": 3
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 1715
+              },
+              {
+                "field": "target.aura",
+                "op": "not_contains",
+                "value": 7373
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "warrior.hamstring",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "warrior-attack",
+          "owner": "combat",
+          "priority": 50,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 1
+              },
+              {
+                "field": "target.distance",
+                "op": "lte",
+                "value": 3
+              }
+            ]
+          },
+          "action": {
+            "kind": "attack",
+            "ability": "combat.attack",
+            "target": "primary_enemy"
+          }
+        }
+      ]
+    }
+  ]
+}

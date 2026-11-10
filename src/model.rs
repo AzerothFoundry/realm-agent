@@ -36,6 +36,7 @@ pub struct Entity {
     pub level: Option<u8>,
     pub class: Option<u8>,
     pub flags: u32,
+    #[serde(default)] pub duel_arbiter:u64,
     pub auras: BTreeSet<u32>,
     pub target: Option<u64>,
     pub updated_ms: u64,
@@ -60,6 +61,10 @@ pub struct WorldView {
     pub money: Option<u32>, pub vendor: Option<VendorView>,
     pub duel: Option<DuelView>, pub run_speed: f32,
     pub casts: BTreeMap<u64, CastView>,
+    pub rooted: bool,
+    pub control_lost: bool,
+    pub position_revision:u64,
+    pub group_members: Vec<String>,
 }
 impl WorldView {
     pub fn me(&self) -> Option<&Entity> { self.objects.get(&self.self_guid) }
@@ -127,6 +132,11 @@ pub struct Status {
     pub class:u8, pub position:Option<Position>, pub task:Option<TaskStatus>,
     pub health_pct:Option<f32>, pub mana_pct:Option<f32>, pub visible_objects:usize,
     pub event_sequence:u64, pub protocol_errors:u64, pub navigation:String,
+    pub instance_id:String, pub account:String, pub race:u8,
+    pub group_members:Vec<String>, pub resident_kib:Option<u64>,
+    pub known_spells:usize, pub inventory_slots:usize,
+    pub objects:Vec<Entity>,
+    pub policy:String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentEvent {
