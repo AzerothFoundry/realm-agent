@@ -5,6 +5,10 @@ pub const FROSTBOLT: &[u32] = &[116,205,837,7322,8406,8407,8408,10179,10180,1018
 pub const FIREBALL: &[u32] = &[133,143,145,3140,8400,8401,8402,10148,10149,10150,10151,25306];
 pub const FIRE_BLAST: &[u32] = &[2136,2137,2138,8412,8413,10197,10199];
 pub const FROST_NOVA: &[u32] = &[122,865,6131,10230];
+pub const COUNTERSPELL: &[u32] = &[2139];
+pub const CONE_OF_COLD: &[u32] = &[120,8492,10159,10160,10161];
+pub const ICE_BARRIER: &[u32] = &[11426,13031,13032,13033];
+pub const ICE_BLOCK: &[u32] = &[11958];
 pub const HAMSTRING: &[u32] = &[1715,7372,7373];
 pub const HEROIC_STRIKE: &[u32] = &[78,284,285,1608,11564,11565,11566,11567,25286];
 pub const CHARGE: &[u32] = &[100,6178,11578];
@@ -55,6 +59,10 @@ pub fn choose_actions(view:&WorldView,target:u64)->Vec<Action>{
 /// (cast time, cooldown, GCD) in milliseconds. Conservative hints, not DBC validation.
 /// Unknown spells get the ordinary GCD and no invented long cooldown.
 pub fn spell_timing(spell:u32)->(u64,u64,u64){
+ if COUNTERSPELL.contains(&spell){return(0,30000,0)}
+ if CONE_OF_COLD.contains(&spell){return(0,10000,1500)}
+ if ICE_BARRIER.contains(&spell){return(0,30000,1500)}
+ if ICE_BLOCK.contains(&spell){return(0,300000,1500)}
  if let Some(rank)=FROSTBOLT.iter().position(|s|*s==spell){return ([1500,1800,2200,2600].get(rank).copied().unwrap_or(3000),0,1500)}
  if let Some(rank)=FIREBALL.iter().position(|s|*s==spell){return ([1500,2000,2500,3000].get(rank).copied().unwrap_or(3500),0,1500)}
  if FIRE_BLAST.contains(&spell){return(0,8000,1500)}

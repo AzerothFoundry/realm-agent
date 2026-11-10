@@ -57,7 +57,7 @@ pub struct WorldView {
     pub self_guid: u64, pub character: String, pub race: u8, pub class: u8,
     pub position: Option<Position>, pub objects: BTreeMap<u64,Entity>,
     pub spells: BTreeSet<u32>, pub cooldowns: BTreeMap<u32,u64>,
-    pub casting_until: u64, pub gcd_until: u64, pub inventory: Vec<InventoryItem>,
+    pub casting_until: u64, pub gcd_until: u64, pub pending_spell:Option<u32>, pub inventory: Vec<InventoryItem>,
     pub money: Option<u32>, pub vendor: Option<VendorView>,
     pub duel: Option<DuelView>, pub run_speed: f32,
     pub casts: BTreeMap<u64, CastView>,
@@ -111,6 +111,7 @@ pub enum GameEvent {
     DuelRequested{arbiter:u64,challenger:u64}, DuelCountdown{seconds:u32},
     DuelComplete{started:bool}, DuelWinner{winner:String,loser:String},
     Attacked{attacker:u64}, CastFailed{spell:u32,reason:String}, GroupInvite{inviter:u64},
+    SpellStarted{spell:u32,cast_ms:u32}, SpellLaunched{spell:u32,hits:usize}, Damage{spell:u32,source:u64,target:u64,amount:u32},
     Disconnected{reason:String}, NavigationArrived, NavigationFailed{reason:String},
 }
 #[derive(Clone, Debug)]
@@ -136,7 +137,7 @@ pub struct Status {
     pub group_members:Vec<String>, pub resident_kib:Option<u64>,
     pub known_spells:usize, pub inventory_slots:usize,
     pub objects:Vec<Entity>,
-    pub policy:String,
+    pub policy:String, pub now_ms:u64, pub casting_until:u64, pub gcd_until:u64, pub rooted:bool, pub control_lost:bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentEvent {

@@ -118,12 +118,13 @@ impl ConnectedClient {
                         if transport.is_none(){if stop||duration_ms==0||path.len()<2{let map=self.view.position.map_or(0,|p|p.map);if let Some(e)=self.view.objects.get_mut(&guid){e.position=Some(Position{map,x:start[0],y:start[1],z:start[2],orientation:match facing{messages::MonsterMoveFacing::Angle(a)=>a,_=>e.position.map_or(0.,|p|p.orientation)}});}}else if self.remote_splines.len()<4096{self.remote_splines.insert(guid,RemoteSpline{path,began:self.view.now_ms,offset:0,duration:u64::from(duration_ms),id:spline_id,cyclic:false,facing});}}
                     }
                     SessionEvent::VendorInventory{vendor,items}=>{self.view.vendor=Some(crate::model::VendorView{guid:vendor,items:items.into_iter().filter_map(|i|u8::try_from(i.slot).ok().map(|slot|crate::model::VendorItem{slot,entry:i.entry,price:i.price,buy_count:i.buy_count})).collect()});}
-                    SessionEvent::SpellStart{caster,spell_id,cast_time_ms,..}=>{let ends=self.view.now_ms+u64::from(cast_time_ms);self.view.casts.insert(caster,crate::model::CastView{spell:spell_id,ends_ms:ends});if caster==self.character_guid{self.view.casting_until=ends;self.view.gcd_until=self.view.now_ms+crate::strategy::spell_timing(spell_id).2;}}
-                    SessionEvent::SpellGo{caster,spell_id,..}=>{self.view.casts.remove(&caster);if caster==self.character_guid{self.view.casting_until=self.view.now_ms;let(_,cd,gcd)=crate::strategy::spell_timing(spell_id);self.view.cooldowns.insert(spell_id,self.view.now_ms+cd);if crate::strategy::spell_timing(spell_id).0==0{self.view.gcd_until=self.view.gcd_until.max(self.view.now_ms+gcd);}}}
-                    SessionEvent::SpellFailedOther{caster,..}=>{self.view.casts.remove(&caster);if caster==self.character_guid{self.view.casting_until=self.view.now_ms;}}
+                    SessionEvent::SpellStart{caster,spell_id,cast_time_ms,..}=>{let ends=self.view.now_ms+u64::from(cast_time_ms);self.view.casts.insert(caster,crate::model::CastView{spell:spell_id,ends_ms:ends});if caster==self.character_guid{events.push(GameEvent::SpellStarted{spell:spell_id,cast_ms:cast_time_ms});self.view.casting_until=ends;self.view.gcd_until=self.view.now_ms+crate::strategy::spell_timing(spell_id).2;}}
+                    SessionEvent::SpellGo{caster,spell_id,hits,..}=>{if caster==self.character_guid{events.push(GameEvent::SpellLaunched{spell:spell_id,hits:hits.len()});}let requested=settle_cast(&mut self.view,caster,spell_id);if caster==self.character_guid&&requested{let(_,cd,gcd)=crate::strategy::spell_timing(spell_id);self.view.cooldowns.insert(spell_id,self.view.now_ms+cd);if crate::strategy::spell_timing(spell_id).0==0{self.view.gcd_until=self.view.gcd_until.max(self.view.now_ms+gcd);}}}
+                    SessionEvent::SpellFailedOther{caster,spell_id}=>{settle_cast(&mut self.view,caster,spell_id);}
                     SessionEvent::SpellDelayed{caster,delay_ms}=>{if let Some(c)=self.view.casts.get_mut(&caster){c.ends_ms+=u64::from(delay_ms);}if caster==self.character_guid{self.view.casting_until+=u64::from(delay_ms);}}
                     SessionEvent::ChannelStart{duration_ms,..}=>{self.view.casting_until=self.view.now_ms+u64::from(duration_ms);}
                     SessionEvent::ChannelUpdate{remaining_ms}=>{self.view.casting_until=self.view.now_ms+u64::from(remaining_ms);}
+                    SessionEvent::SpellDamageLog(log)=>{if log.attacker==self.character_guid||log.target==self.character_guid{events.push(GameEvent::Damage{spell:log.spell_id,source:log.attacker,target:log.target,amount:log.damage});}}
                     SessionEvent::AttackStart{attacker,victim}=>{if victim==self.character_guid{events.push(GameEvent::Attacked{attacker});}}
                     SessionEvent::ForceSpeedChange{guid,kind,counter,speed}=>{if guid==self.character_guid{if let Some(p)=self.view.position{self.writer.force_speed_change_ack(kind,guid,counter,speed,if self.view.rooted{0x1000}else{0},[p.x,p.y,p.z],p.orientation,0.,0,None,None)?;}if matches!(kind,messages::SpeedKind::Run){self.view.run_speed=speed;}}}
                     SessionEvent::MoveMode{guid,counter,mode,apply}=>{if guid==self.character_guid{if matches!(mode,messages::MoveMode::Root){self.view.rooted=apply;}if let Some(p)=self.view.position{self.writer.move_mode_ack(guid,counter,mode,apply,if self.view.rooted{0x1000}else{0},([p.x,p.y,p.z],p.orientation))?;}}}
@@ -136,7 +137,7 @@ impl ConnectedClient {
                     SessionEvent::DuelComplete { started } => {self.view.duel=None;events.push(GameEvent::DuelComplete { started });},
                     SessionEvent::DuelRequested { arbiter, challenger } => {self.view.duel=Some(crate::model::DuelView{arbiter,opponent:if challenger==self.character_guid{self.view.me().and_then(|m|m.target).unwrap_or(0)}else{challenger},starts_ms:None,active:false});events.push(GameEvent::DuelRequested { arbiter, challenger });},
                     SessionEvent::DuelWinner { winner, loser, .. } => events.push(GameEvent::DuelWinner { winner, loser }),
-                    SessionEvent::CastResult { spell_id, success, reason, .. } if !success => {self.view.casting_until=self.view.now_ms;events.push(GameEvent::CastFailed { spell: spell_id, reason: format!("server_result_{:?}", reason) });},
+                    SessionEvent::CastResult { spell_id, success, reason, .. } if !success => {settle_cast(&mut self.view,self.character_guid,spell_id);events.push(GameEvent::CastFailed { spell: spell_id, reason: format!("server_result_{:?}", reason) });},
                     SessionEvent::Disconnected { reason, .. } => events.push(GameEvent::Disconnected { reason }),
                     SessionEvent::GroupList { members, .. } => { self.view.group_members=members.into_iter().map(|m|m.name).collect(); }
                     SessionEvent::GroupDestroyed | SessionEvent::GroupUninvited => {self.view.group_members.clear();}
@@ -181,8 +182,17 @@ impl ConnectedClient {
     fn update_entity(e:&mut Entity,f:&messages::ObjectFields,now:u64){e.entry=f.object_entry().unwrap_or(e.entry);e.health=f.unit_health();e.max_health=f.unit_max_health();e.mana=f.unit_power(0);e.max_mana=f.unit_max_power(0);e.rage=f.unit_shown_power(1);e.auras=f.unit_aura_ids().filter(|x|*x!=0).collect();e.level=f.unit_level().and_then(|x|u8::try_from(x).ok());e.flags= f.unit_flags();e.class=f.unit_class();e.duel_arbiter=if e.kind==Kind::Player{f.player_duel_arbiter()}else{0};e.target=f.unit_target();e.updated_ms=now;}
 }
 
+// Triggered effects (e.g. Frost Armor chill) launch while a real cast is still preparing.
+// Only the matching requested spell may finish that cast; never clear it for every SpellGo.
+fn settle_cast(view:&mut WorldView,caster:u64,spell:u32)->bool{
+    if view.casts.get(&caster).is_some_and(|c|c.spell==spell){view.casts.remove(&caster);}
+    if caster==view.self_guid&&view.pending_spell==Some(spell){view.pending_spell=None;view.casting_until=view.now_ms;return true;}
+    false
+}
 #[cfg(test)]mod spline_tests{
  use super::*;
+ #[test]fn triggered_chill_does_not_cancel_frostbolt_cast(){let mut view=WorldView{self_guid:223,now_ms:1000,pending_spell:Some(25304),casting_until:4000,..Default::default()};view.casts.insert(223,crate::model::CastView{spell:25304,ends_ms:4000});assert!(!settle_cast(&mut view,223,7321));assert_eq!(view.casting_until,4000);assert_eq!(view.pending_spell,Some(25304));assert_eq!(view.casts[&223].spell,25304);assert!(settle_cast(&mut view,223,25304));assert_eq!(view.casting_until,1000);assert_eq!(view.pending_spell,None);}
+ #[test]fn unrelated_failure_does_not_clear_active_cast(){let mut view=WorldView{self_guid:223,now_ms:1000,pending_spell:Some(25304),casting_until:4000,..Default::default()};assert!(!settle_cast(&mut view,223,1131));assert_eq!(view.casting_until,4000);}
  #[test]fn arc_length_not_point_index(){let path=[[0.,0.,0.],[1.,0.,0.],[1.,9.,0.]];let(p,_)=spline_point(&path,0.5);assert!((p[0]-1.).abs()<0.001&&(p[1]-4.).abs()<0.001);let(p,_)=spline_point(&path,1.);assert_eq!(p,[1.,9.,0.]);}
  #[test]fn height_and_duplicate_points(){let path=[[0.,0.,0.],[0.,0.,0.],[0.,0.,10.]];assert_eq!(spline_point(&path,0.5).0,[0.,0.,5.]);}
 }

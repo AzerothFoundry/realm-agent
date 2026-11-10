@@ -145,10 +145,12 @@ fn capability(a: &ActionSpec) -> bool {
         "mage.frostbolt"
         | "mage.fireball"
         | "mage.fire_blast"
+        | "mage.counterspell"
+        
         | "warrior.hamstring"
         | "warrior.charge"
         | "warrior.heroic_strike" => a.kind == ActionKind::Cast && a.target == "primary_enemy",
-        "mage.frost_nova" => a.kind == ActionKind::Cast && a.target == "self",
+        "mage.cone_of_cold" | "mage.frost_nova" | "mage.ice_barrier" | "mage.ice_block" => a.kind == ActionKind::Cast && a.target == "self",
         "combat.attack" => a.kind == ActionKind::Attack && a.target == "primary_enemy",
         "combat.approach" => a.kind == ActionKind::Move && a.target == "primary_enemy",
         "travel.stop" => a.kind == ActionKind::Stop && a.target == "none",

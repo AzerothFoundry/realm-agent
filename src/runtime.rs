@@ -56,7 +56,7 @@ impl AgentRuntime {
                 self.stop()?;
                 if let Some(t)=target {if t!=self.client.character_guid{if let (Some(from),Some(to))=(self.client.view.position,self.client.view.objects.get(&t).and_then(|e|e.position)){let mut p=from;p.orientation=(to.y-from.y).atan2(to.x-from.x);self.client.writer.send_movement(opcode::MSG_MOVE_SET_FACING,if self.client.view.rooted{0x1000}else{0},[p.x,p.y,p.z],p.orientation,0.,0,None,None)?;self.client.view.position=Some(p);}}}
                 self.client.execute(Action::Stand(0))?;
-                self.client.execute(Action::Cast{spell,target})?;
+                self.client.execute(Action::Cast{spell,target})?;self.client.view.pending_spell=Some(spell);
                 let(cast,_,gcd)=crate::strategy::spell_timing(spell);let now=self.client.view.now_ms;
                 self.client.view.casting_until=now+cast.max(300);self.client.view.gcd_until=self.client.view.gcd_until.max(now+gcd);
                 self.emit("action.cast_requested",json!({"spell":spell,"target":target}))
@@ -87,6 +87,9 @@ impl AgentRuntime {
                 if self.config.auto_accept_group{self.client.execute(Action::AcceptGroup)?;self.emit("group.invite_accept_requested",json!({"mode":"continue_current_task"}))?;}
                 Ok(())
             }
+            GameEvent::SpellStarted{spell,cast_ms}=>{self.emit("combat.spell_started",json!({"spell":spell,"cast_ms":cast_ms}))},
+            GameEvent::SpellLaunched{spell,hits}=>{self.emit("combat.spell_launched",json!({"spell":spell,"hits":hits}))},
+            GameEvent::Damage{spell,source,target,amount}=>{self.emit("combat.damage",json!({"spell":spell,"source":source,"target":target,"amount":amount}))},
             GameEvent::Disconnected{reason}=>{self.client.view.connected=false;self.emit("agent.disconnected",json!({"reason":reason}))?;anyhow::bail!("world_disconnected")}
             other=>{let e=self.task.event(other,&self.client.view);self.effects(e)}
         }
@@ -117,7 +120,7 @@ impl AgentRuntime {
         let visible_objects=view.objects.values().filter(|e|matches!(e.kind,Kind::Player|Kind::Creature|Kind::GameObject)).count();
         let objects:Vec<_>=view.objects.values().filter(|e|matches!(e.kind,Kind::Player|Kind::Creature|Kind::GameObject)).cloned().take(512).collect();
         let mut public=self.public.lock().map_err(|_|anyhow::anyhow!("status_poisoned"))?;
-        *public=Status{schema_version:1,connected:view.connected,character:view.character.clone(),class:view.class,position:view.position,task,health_pct:me.and_then(|e|e.health_pct()),mana_pct:me.and_then(|e|e.mana_pct()),visible_objects,event_sequence:self.events.history(0,1)?.latest,protocol_errors:self.client.protocol_errors,navigation:if self.leg.is_some(){"moving".into()}else{"idle".into()},instance_id:self.config.instance_id.clone(),account:self.config.account.username.clone(),race:view.race,group_members:view.group_members.clone(),resident_kib:self.resident_kib,known_spells:view.spells.len(),inventory_slots:view.inventory.len(),objects,policy:self.strategy.status()};Ok(())
+        *public=Status{schema_version:1,connected:view.connected,character:view.character.clone(),class:view.class,position:view.position,task,health_pct:me.and_then(|e|e.health_pct()),mana_pct:me.and_then(|e|e.mana_pct()),visible_objects,event_sequence:self.events.history(0,1)?.latest,protocol_errors:self.client.protocol_errors,navigation:if self.leg.is_some(){"moving".into()}else{"idle".into()},instance_id:self.config.instance_id.clone(),account:self.config.account.username.clone(),race:view.race,group_members:view.group_members.clone(),resident_kib:self.resident_kib,known_spells:view.spells.len(),inventory_slots:view.inventory.len(),objects,policy:self.strategy.status(),now_ms:view.now_ms,casting_until:view.casting_until,gcd_until:view.gcd_until,rooted:view.rooted,control_lost:view.control_lost};Ok(())
     }
     pub fn run(mut self,commands:Receiver<Command>)->Result<()> {
         loop {
