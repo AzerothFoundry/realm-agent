@@ -18,6 +18,7 @@ pub struct PolicyRuntime {
     last_target: u64,
     error: String,
     status: String,
+    last_selection:String,
 }
 impl PolicyRuntime {
     pub fn new(path: Option<PathBuf>) -> Result<Self> {
@@ -33,6 +34,7 @@ impl PolicyRuntime {
             last_target: 0,
             error: String::new(),
             status: "fallback:no_policy".into(),
+            last_selection:String::new(),
         };
         if p.path.is_some() {
             p.load()?;
@@ -225,11 +227,12 @@ impl PolicyRuntime {
             if candidate.expires_ms<=w.now_ms{continue;}
             if let Some(actions)=translate(w,target,&candidate.action){
                 let file=self.pinned_files.get(index).map_or("<memory>",String::as_str);
+                self.last_selection=format!("last_policy={} last_rule={}",file,candidate.rule);
                 self.status=format!("generation={} policy={} target_class={} opponents={} rule={} decision=matched",candidate.generation,file,enemy.class.map_or_else(||"unknown".into(),|c|c.to_string()),o.opponent_count,candidate.rule);
                 return Some(actions);
             }
         }
-        self.status=format!("generation={} decision={}",self.generation,if unknown{"unknown_observation"}else{"no_applicable_rule"});
+        self.status=format!("generation={} decision={} {}",self.generation,if unknown{"unknown_observation"}else{"no_applicable_rule"},self.last_selection);
         None
     }
 }

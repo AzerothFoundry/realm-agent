@@ -59,7 +59,7 @@ impl AgentRuntime {
                 self.client.execute(Action::Cast{spell,target})?;self.client.view.pending_spell=Some(spell);
                 let(cast,_,gcd)=crate::strategy::spell_timing(spell);let now=self.client.view.now_ms;
                 self.client.view.casting_until=now+cast.max(300);self.client.view.gcd_until=self.client.view.gcd_until.max(now+gcd);
-                self.emit("action.cast_requested",json!({"spell":spell,"target":target}))
+                self.emit("action.cast_requested",json!({"spell":spell,"target":target,"policy":self.strategy.status()}))
             }
             Action::UseItem{bag,slot}=>{self.client.execute(Action::UseItem{bag,slot})?;self.emit("action.item_use_requested",json!({"bag":bag,"slot":slot}))},
             other=>{self.client.execute(other)?;Ok(())}
