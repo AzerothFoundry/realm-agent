@@ -34,7 +34,7 @@ All routes require `Authorization: Bearer ...`:
 - `GET /ws?after=0`: WebSocket initial snapshot, replay and live events with explicit gaps; receive-only.
 - `GET /events` and `/events/history?after=0`: legacy SSE and bounded event recovery.
 
-HTTP 202 means queued, not completed; use status and events to observe the result. WebSocket messages cannot request raw movement, casts or packets. See [API](docs/API.md), [policy](docs/POLICY.md), and [live validation](docs/VALIDATION.md).
+HTTP 202 means queued, not completed; use status and events to observe the result. WebSocket messages cannot request raw movement, casts or packets. See [API](docs/API.md), [policy](docs/POLICY.md), [Mage matchup matrix](docs/MAGE-MATRIX.md), and [live validation](docs/VALIDATION.md).
 
 ## Limits
 

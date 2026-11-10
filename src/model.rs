@@ -35,6 +35,7 @@ pub struct Entity {
     #[serde(default)] pub rage: Option<u32>,
     pub level: Option<u8>,
     pub class: Option<u8>,
+    #[serde(default)] pub form:Option<u8>,
     pub flags: u32,
     #[serde(default)] pub duel_arbiter:u64,
     pub auras: BTreeSet<u32>,
@@ -57,10 +58,11 @@ pub struct WorldView {
     pub self_guid: u64, pub character: String, pub race: u8, pub class: u8,
     pub position: Option<Position>, pub objects: BTreeMap<u64,Entity>,
     pub spells: BTreeSet<u32>, pub cooldowns: BTreeMap<u32,u64>,
-    pub casting_until: u64, pub gcd_until: u64, pub inventory: Vec<InventoryItem>,
+    pub casting_until: u64, pub gcd_until: u64, pub pending_spell:Option<u32>, pub inventory: Vec<InventoryItem>,
     pub money: Option<u32>, pub vendor: Option<VendorView>,
     pub duel: Option<DuelView>, pub run_speed: f32,
     pub casts: BTreeMap<u64, CastView>,
+    pub observed_spells:BTreeMap<u64,BTreeMap<u32,u64>>,
     pub rooted: bool,
     pub control_lost: bool,
     pub position_revision:u64,
@@ -111,6 +113,7 @@ pub enum GameEvent {
     DuelRequested{arbiter:u64,challenger:u64}, DuelCountdown{seconds:u32},
     DuelComplete{started:bool}, DuelWinner{winner:String,loser:String},
     Attacked{attacker:u64}, CastFailed{spell:u32,reason:String}, GroupInvite{inviter:u64},
+    SpellStarted{spell:u32,cast_ms:u32}, SpellLaunched{spell:u32,hits:usize}, Damage{spell:u32,source:u64,target:u64,amount:u32},
     Disconnected{reason:String}, NavigationArrived, NavigationFailed{reason:String},
 }
 #[derive(Clone, Debug)]
@@ -118,7 +121,7 @@ pub enum Action {
     Select(u64), Cast{spell:u32,target:Option<u64>}, AcceptDuel(u64), CancelDuel(u64),
     Navigate(Position), StopMoving, Stand(u32), UseItem{bag:u8,slot:u8},
     VendorList(u64), Buy{vendor:u64,item:u32,slot:u8,count:u8}, StopAttack,
-    Attack(u64), AcceptGroup,
+    Attack(u64), AcceptGroup, CancelCast(u32),
 }
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct TaskStatus {
@@ -136,7 +139,7 @@ pub struct Status {
     pub group_members:Vec<String>, pub resident_kib:Option<u64>,
     pub known_spells:usize, pub inventory_slots:usize,
     pub objects:Vec<Entity>,
-    pub policy:String,
+    pub policy:String, pub now_ms:u64, pub casting_until:u64, pub gcd_until:u64, pub rooted:bool, pub control_lost:bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentEvent {

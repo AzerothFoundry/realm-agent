@@ -1,0 +1,459 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "enabled": true,
+  "scope": {
+    "mode": "world_pvp",
+    "min_opponents": 1,
+    "max_opponents": 8
+  },
+  "predicates": {
+    "rooted": {
+      "any": [
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 122
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 865
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 6131
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 10230
+        }
+      ]
+    }
+  },
+  "phases": [
+    {
+      "id": "engage",
+      "min_hold_ms": 0,
+      "rules": [
+        {
+          "id": "mage-vs-warlock-interrupt-observed-fear",
+          "owner": "mage.matchup",
+          "priority": 1380,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "field": "target.casting",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "any": [
+                  {
+                    "field": "target.cast_spell",
+                    "op": "eq",
+                    "value": 5782
+                  },
+                  {
+                    "field": "target.cast_spell",
+                    "op": "eq",
+                    "value": 6213
+                  },
+                  {
+                    "field": "target.cast_spell",
+                    "op": "eq",
+                    "value": 6215
+                  }
+                ]
+              },
+              {
+                "field": "target.distance",
+                "op": "lte",
+                "value": 30
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 2139
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.counterspell",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-remove-observed-curse",
+          "owner": "mage.matchup",
+          "priority": 1250,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "any": [
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 18223
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 1714
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 11719
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 1490
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 11721
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 11722
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 17862
+                  },
+                  {
+                    "field": "self.aura",
+                    "op": "contains",
+                    "value": 17937
+                  }
+                ]
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 475
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.remove_curse",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-interrupt-observed-cast",
+          "owner": "mage.matchup.warlock",
+          "priority": 1300,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.casting",
+                    "op": "eq",
+                    "value": true
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 30
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 2139
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.counterspell",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-fireblast-before-contact",
+          "owner": "mage.matchup.warlock",
+          "priority": 910,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 20
+                  },
+                  {
+                    "field": "self.health_pct",
+                    "op": "lt",
+                    "value": 40
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 2136
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.fire_blast",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-nova-close",
+          "owner": "mage.matchup.warlock",
+          "priority": 1080,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 8
+                  },
+                  {
+                    "not": {
+                      "ref": "rooted"
+                    }
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 122
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frost_nova",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-open-rooted-distance",
+          "owner": "mage.matchup.warlock",
+          "priority": 1000,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "ref": "rooted"
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lt",
+                    "value": 18
+                  },
+                  {
+                    "field": "self.casting",
+                    "op": "eq",
+                    "value": false
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-finish-fireblast",
+          "owner": "mage.matchup.warlock",
+          "priority": 900,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.health_pct",
+                    "op": "lte",
+                    "value": 20
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 20
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 2136
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.fire_blast",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-approach",
+          "owner": "mage.matchup.warlock",
+          "priority": 600,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "gt",
+                    "value": 30
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-warlock-frostbolt",
+          "owner": "mage.matchup.warlock",
+          "priority": 350,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 9
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 30
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 116
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frostbolt",
+            "target": "primary_enemy"
+          }
+        }
+      ]
+    }
+  ]
+}

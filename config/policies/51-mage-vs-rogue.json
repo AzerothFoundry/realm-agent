@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "enabled": true,
+  "scope": {
+    "mode": "world_pvp",
+    "min_opponents": 1,
+    "max_opponents": 8
+  },
+  "predicates": {
+    "rooted": {
+      "any": [
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 122
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 865
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 6131
+        },
+        {
+          "field": "target.aura",
+          "op": "contains",
+          "value": 10230
+        }
+      ]
+    }
+  },
+  "phases": [
+    {
+      "id": "engage",
+      "min_hold_ms": 0,
+      "rules": [
+        {
+          "id": "mage-vs-rogue-after-observed-kidney-defense",
+          "owner": "mage.matchup.observed",
+          "priority": 1440,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "field": "target.recent_spells",
+                "op": "contains",
+                "value": 8643
+              },
+              {
+                "field": "self.ready_spells",
+                "op": "contains",
+                "value": 11426
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 11426
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13031
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13032
+              },
+              {
+                "field": "self.aura",
+                "op": "not_contains",
+                "value": 13033
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.ice_barrier",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-nova-close",
+          "owner": "mage.matchup.rogue",
+          "priority": 1100,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 8
+                  },
+                  {
+                    "not": {
+                      "ref": "rooted"
+                    }
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 122
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frost_nova",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-fireball-observed-rogue",
+          "owner": "mage.matchup.rogue",
+          "priority": 500,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "gt",
+                    "value": 8
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 30
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 133
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.fireball",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-cone-close",
+          "owner": "mage.matchup.rogue",
+          "priority": 950,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 8
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 120
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.cone_of_cold",
+            "target": "self"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-open-rooted-distance",
+          "owner": "mage.matchup.rogue",
+          "priority": 1000,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "ref": "rooted"
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lt",
+                    "value": 18
+                  },
+                  {
+                    "field": "self.casting",
+                    "op": "eq",
+                    "value": false
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-finish-fireblast",
+          "owner": "mage.matchup.rogue",
+          "priority": 900,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.health_pct",
+                    "op": "lte",
+                    "value": 20
+                  },
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 20
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 2136
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.fire_blast",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-approach",
+          "owner": "mage.matchup.rogue",
+          "priority": 600,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "gt",
+                    "value": 30
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "move",
+            "ability": "combat.approach",
+            "target": "primary_enemy"
+          }
+        },
+        {
+          "id": "mage-vs-rogue-frostbolt",
+          "owner": "mage.matchup.rogue",
+          "priority": 350,
+          "when": {
+            "all": [
+              {
+                "field": "self.class",
+                "op": "eq",
+                "value": 8
+              },
+              {
+                "field": "target.class",
+                "op": "eq",
+                "value": 4
+              },
+              {
+                "all": [
+                  {
+                    "field": "target.distance",
+                    "op": "lte",
+                    "value": 30
+                  },
+                  {
+                    "field": "self.ready_spells",
+                    "op": "contains",
+                    "value": 116
+                  }
+                ]
+              }
+            ]
+          },
+          "action": {
+            "kind": "cast",
+            "ability": "mage.frostbolt",
+            "target": "primary_enemy"
+          }
+        }
+      ]
+    }
+  ]
+}

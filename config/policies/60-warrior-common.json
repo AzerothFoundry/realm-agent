@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 1,
+  "revision": 3,
   "enabled": true,
   "scope": {
     "mode": "world_pvp",
@@ -13,59 +13,6 @@
       "id": "engage",
       "min_hold_ms": 0,
       "rules": [
-        {
-          "id": "mage-approach",
-          "owner": "combat",
-          "priority": 600,
-          "when": {
-            "all": [
-              {
-                "field": "self.class",
-                "op": "eq",
-                "value": 8
-              },
-              {
-                "field": "target.distance",
-                "op": "gt",
-                "value": 30
-              }
-            ]
-          },
-          "action": {
-            "kind": "move",
-            "ability": "combat.approach",
-            "target": "primary_enemy"
-          }
-        },
-        {
-          "id": "mage-frostbolt",
-          "owner": "combat",
-          "priority": 100,
-          "when": {
-            "all": [
-              {
-                "field": "self.class",
-                "op": "eq",
-                "value": 8
-              },
-              {
-                "field": "self.ready_spells",
-                "op": "contains",
-                "value": 116
-              },
-              {
-                "field": "target.distance",
-                "op": "lte",
-                "value": 30
-              }
-            ]
-          },
-          "action": {
-            "kind": "cast",
-            "ability": "mage.frostbolt",
-            "target": "primary_enemy"
-          }
-        },
         {
           "id": "warrior-approach",
           "owner": "combat",
